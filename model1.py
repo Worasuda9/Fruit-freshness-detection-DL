@@ -1,9 +1,62 @@
+import os
+import random
+import shutil
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+
+# =========================
+# CONFIG
+# =========================
+SOURCE_DIR = "dataset"
+TARGET_DIR = "dataset_split"
+
+SPLIT_RATIO = {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+}
+
+CLASSES = ["fresh", "rotten"]
+FRUITS = ["apple", "banana", "orange"]
+
+# =========================
+# CREATE FOLDERS
+# =========================
+for split in SPLIT_RATIO:
+    for cls in CLASSES:
+        os.makedirs(os.path.join(TARGET_DIR, split, cls), exist_ok=True)
+
+# =========================
+# COLLECT & SPLIT DATA
+# =========================
+for fruit in FRUITS:
+    for cls in CLASSES:
+        folder = os.path.join(SOURCE_DIR, fruit, cls)
+        images = os.listdir(folder)
+        random.shuffle(images)
+
+        total = len(images)
+        train_end = int(total * SPLIT_RATIO["train"])
+        val_end = train_end + int(total * SPLIT_RATIO["val"])
+
+        splits = {
+            "train": images[:train_end],
+            "val": images[train_end:val_end],
+            "test": images[val_end:]
+        }
+
+        for split in splits:
+            for img in splits[split]:
+                src = os.path.join(folder, img)
+                dst = os.path.join(TARGET_DIR, split, cls, f"{fruit}_{img}")
+
+                shutil.copy(src, dst)
+
+print("Dataset split completed!")
 
 # =========================
 # 1. Config
@@ -24,8 +77,8 @@ transform = transforms.Compose([
 # =========================
 # 3. Load Dataset
 # =========================
-train_data = datasets.ImageFolder("dataset/train", transform=transform)
-val_data = datasets.ImageFolder("dataset/val", transform=transform)
+train_data = datasets.ImageFolder("dataset_split/train", transform=transform)
+val_data = datasets.ImageFolder("dataset_split/val", transform=transform)
 
 train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
