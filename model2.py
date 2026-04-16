@@ -99,7 +99,8 @@ transform = transforms_v2.Compose([
         hue=0.1
     ),
     transforms_v2.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
-    transforms_v2.ToTensor(),
+    transforms_v2.ToImage(),
+    transforms_v2.ToDtype(torch.float32, scale=True),
     transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
 ])
 
