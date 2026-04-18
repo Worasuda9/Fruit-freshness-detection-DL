@@ -1,0 +1,8 @@
+dataset/
+dataset_split/
+*.jpg
+*.png
+*.jpeg
+__pycache__/
+*.pyc
+*.pkl
