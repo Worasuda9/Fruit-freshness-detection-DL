@@ -4,6 +4,15 @@ A PyTorch-based project that compares 3 models for classifying fruits as **fresh
 
 ---
 
+## 📥 Dataset Download
+
+| Data | Link |
+|------|------|
+| 🗂️ Full Dataset | [Download from Google Drive](https://drive.google.com/file/d/1SS-HpNd_HfUSEyjbPm77vwMb4BErP1z5/view?usp=drive_link) |
+| 🧪 Test Data | [Download from Google Drive](https://drive.google.com/drive/folders/1_ro7M60Mb1lRmGJEFkiZaQLWGbEVSlDr) |
+
+---
+
 ## 📁 Dataset Structure
 
 ```
