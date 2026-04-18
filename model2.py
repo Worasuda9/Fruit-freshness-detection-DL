@@ -86,16 +86,17 @@ print("Dataset split completed!")
 # =========================
 # 6. TRANSFORM (WITH AUGMENTATION)
 # =========================
-transform = transforms_v2.Compose([
-    transforms_v2.Resize((IMG_SIZE, IMG_SIZE)),
-    transforms_v2.RandomHorizontalFlip(p=0.5),  # randomly flip 50% of images
+# Train transform (full augmentation)
+train_transform = transforms_v2.Compose([
+    transforms_v2.Resize((256, 256)),               # resize biggest first
+    transforms_v2.RandomCrop((IMG_SIZE, IMG_SIZE)),  # then crop to 224
+    transforms_v2.RandomHorizontalFlip(p=0.5),
     transforms_v2.RandomVerticalFlip(p=0.3),
-    transforms_v2.RandomRotation(degrees=15),  
-    transforms_v2.RandomCrop((IMG_SIZE, IMG_SIZE)),
+    transforms_v2.RandomRotation(degrees=15),
     transforms_v2.ColorJitter(
-        brightness=0.2, 
-        contrast=0.2, 
-        saturation=0.2,  # Key: color variation = ripeness
+        brightness=0.2,
+        contrast=0.2,
+        saturation=0.2,
         hue=0.1
     ),
     transforms_v2.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
@@ -104,12 +105,22 @@ transform = transforms_v2.Compose([
     transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
 ])
 
+# Val/Test transform (No augmentation — Just resize + normalize)
+val_transform = transforms_v2.Compose([
+    transforms_v2.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms_v2.ToImage(),
+    transforms_v2.ToDtype(torch.float32, scale=True),
+    transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+])
+
 # =========================
 # 7. LOAD DATA
 # =========================
-train_data = datasets.ImageFolder(f"{TARGET_DIR}/train", transform=transform)
-val_data = datasets.ImageFolder(f"{TARGET_DIR}/val", transform=transform)
-test_data = datasets.ImageFolder(f"{TARGET_DIR}/test", transform=transform)
+train_data = datasets.ImageFolder(
+    f"{TARGET_DIR}/train", transform=train_transform)
+val_data = datasets.ImageFolder(f"{TARGET_DIR}/val",   transform=val_transform)
+test_data = datasets.ImageFolder(
+    f"{TARGET_DIR}/test",  transform=val_transform)
 
 train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
@@ -118,6 +129,8 @@ test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
 # =========================
 # 8. MODEL (BASELINE CNN)
 # =========================
+
+
 class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
@@ -147,6 +160,7 @@ class SimpleCNN(nn.Module):
         x = self.conv(x)
         return self.fc(x)
 
+
 model = SimpleCNN().to(DEVICE)
 
 # =========================
@@ -158,6 +172,8 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 # =========================
 # 10. ACCURACY FUNCTION
 # =========================
+
+
 def calculate_accuracy(loader):
     model.eval()
     correct, total = 0, 0
@@ -172,6 +188,7 @@ def calculate_accuracy(loader):
             correct += (preds == labels).sum().item()
 
     return correct / total
+
 
 # =========================
 # 11. TRAINING LOOP
