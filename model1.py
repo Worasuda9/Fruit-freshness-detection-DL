@@ -88,6 +88,8 @@ print("Dataset split completed!")
 transform = transforms.Compose([
     transforms.Resize((IMG_SIZE, IMG_SIZE)),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],   # ImageNet mean
+                         std=[0.229, 0.224, 0.225]),    # ImageNet std
 ])
 
 # =========================
@@ -104,6 +106,8 @@ test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
 # =========================
 # 8. MODEL (BASELINE CNN)
 # =========================
+
+
 class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
@@ -133,6 +137,7 @@ class SimpleCNN(nn.Module):
         x = self.conv(x)
         return self.fc(x)
 
+
 model = SimpleCNN().to(DEVICE)
 
 # =========================
@@ -144,6 +149,8 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 # =========================
 # 10. ACCURACY FUNCTION
 # =========================
+
+
 def calculate_accuracy(loader):
     model.eval()
     correct, total = 0, 0
@@ -158,6 +165,7 @@ def calculate_accuracy(loader):
             correct += (preds == labels).sum().item()
 
     return correct / total
+
 
 # =========================
 # 11. TRAINING LOOP
