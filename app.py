@@ -4,16 +4,12 @@ import torch.nn as nn
 from torchvision import transforms, models
 from PIL import Image
 
-# =========================
 # CONFIG
-# =========================
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 CLASS_NAMES = ["Fresh", "Rotten"]
 
-# =========================
 # LOAD MODEL
-# =========================
 @st.cache_resource
 def load_model():
     model = models.resnet18(pretrained=False)
@@ -27,9 +23,7 @@ def load_model():
 
 model = load_model()
 
-# =========================
 # TRANSFORM
-# =========================
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -37,17 +31,13 @@ transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# =========================
 # UI
-# =========================
 st.title("Fruit Freshness Detection")
 st.write("Upload an image to check if the fruit is Fresh or Rotten")
 
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-# =========================
 # PREDICTION
-# =========================
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_container_width=True)
@@ -62,9 +52,7 @@ if uploaded_file is not None:
     label = CLASS_NAMES[pred.item()]
     conf = confidence.item() * 100
 
-    # =========================
     # RESULT DISPLAY
-    # =========================
     if label == "Fresh":
         st.success(f"Prediction: {label} ({conf:.2f}%)")
     else:
