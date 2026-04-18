@@ -1,13 +1,11 @@
-# =========================
-# 0. IMPORTS
-# =========================
 import os
 import random
 import shutil
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms, models
+from torchvision import datasets, transforms
+from torchvision.models import resnet18, ResNet18_Weights
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -23,9 +21,10 @@ SPLIT_RATIO = {"train": 0.7, "val": 0.15, "test": 0.15}
 CLASSES = ["fresh", "rotten"]
 FRUITS = ["apple", "banana", "orange"]
 
-BATCH_SIZE = 32
-IMG_SIZE = 224
+BATCH_SIZE = 64
+IMG_SIZE = 160
 EPOCHS = 10
+NUM_WORKERS = 0
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # =========================
@@ -43,6 +42,8 @@ if os.path.exists(TARGET_DIR):
 # =========================
 # 4. CREATE SPLIT
 # =========================
+valid_ext = ('.jpg', '.jpeg', '.png', '.bmp', '.webp')
+
 for split in SPLIT_RATIO:
     for cls in CLASSES:
         os.makedirs(os.path.join(TARGET_DIR, split, cls), exist_ok=True)
@@ -50,7 +51,10 @@ for split in SPLIT_RATIO:
 for fruit in FRUITS:
     for cls in CLASSES:
         folder = os.path.join(SOURCE_DIR, fruit, cls)
-        images = [img for img in os.listdir(folder) if not img.startswith('.')]
+        images = [
+            img for img in os.listdir(folder)
+            if not img.startswith('.') and img.lower().endswith(valid_ext)
+        ]
 
         random.shuffle(images)
 
@@ -73,10 +77,12 @@ for fruit in FRUITS:
 print("✅ Dataset split completed!")
 
 # =========================
-# 5. TRANSFORMS (IMPORTANT for ResNet)
+# 5. TRANSFORMS
 # =========================
+weights = ResNet18_Weights.DEFAULT
+
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((IMG_SIZE, IMG_SIZE)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
@@ -89,22 +95,42 @@ train_data = datasets.ImageFolder(f"{TARGET_DIR}/train", transform=transform)
 val_data = datasets.ImageFolder(f"{TARGET_DIR}/val", transform=transform)
 test_data = datasets.ImageFolder(f"{TARGET_DIR}/test", transform=transform)
 
-train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
-test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
+train_loader = DataLoader(
+    train_data,
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=NUM_WORKERS,
+    pin_memory=True,
+    # persistent_workers=(NUM_WORKERS > 0)
+)
+
+val_loader = DataLoader(
+    val_data,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=NUM_WORKERS,
+    pin_memory=True,
+    # persistent_workers=(NUM_WORKERS > 0)
+)
+
+test_loader = DataLoader(
+    test_data,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=NUM_WORKERS,
+    pin_memory=True,
+    # persistent_workers=(NUM_WORKERS > 0)
+)
 
 # =========================
 # 7. LOAD PRETRAINED MODEL
 # =========================
-model = models.resnet18(pretrained=True)
+model = resnet18(weights=weights)
 
-# Freeze feature extractor
 for param in model.parameters():
     param.requires_grad = False
 
-# Replace final layer
 model.fc = nn.Linear(model.fc.in_features, 2)
-
 model = model.to(DEVICE)
 
 # =========================
@@ -113,23 +139,34 @@ model = model.to(DEVICE)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
+# mixed precision
+amp_device = "cuda" if DEVICE.type == "cuda" else "cpu"
+scaler = torch.amp.GradScaler(amp_device, enabled=(DEVICE.type == "cuda"))
+
 # =========================
-# 9. ACCURACY FUNCTION
+# 9. EVALUATION FUNCTION
 # =========================
-def calculate_accuracy(loader):
+def evaluate(loader):
     model.eval()
-    correct, total = 0, 0
+    total_loss = 0
+    correct = 0
+    total = 0
 
     with torch.no_grad():
         for images, labels in loader:
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
+            images = images.to(DEVICE, non_blocking=True)
+            labels = labels.to(DEVICE, non_blocking=True)
 
-            total += labels.size(0)
+            with torch.amp.autocast(amp_device, enabled=(DEVICE.type == "cuda")):
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+
+            total_loss += loss.item()
+            preds = outputs.argmax(dim=1)
             correct += (preds == labels).sum().item()
+            total += labels.size(0)
 
-    return correct / total
+    return total_loss / len(loader), correct / total
 
 # =========================
 # 10. TRAIN LOOP
@@ -140,31 +177,32 @@ train_accs, val_accs = [], []
 for epoch in range(EPOCHS):
     model.train()
     running_loss = 0
+    correct = 0
+    total = 0
 
     for images, labels in train_loader:
-        images, labels = images.to(DEVICE), labels.to(DEVICE)
+        images = images.to(DEVICE, non_blocking=True)
+        labels = labels.to(DEVICE, non_blocking=True)
 
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+
+        with torch.amp.autocast(amp_device, enabled=(DEVICE.type == "cuda")):
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         running_loss += loss.item()
+        preds = outputs.argmax(dim=1)
+        correct += (preds == labels).sum().item()
+        total += labels.size(0)
 
     train_loss = running_loss / len(train_loader)
+    train_acc = correct / total
 
-    model.eval()
-    val_loss = 0
-    with torch.no_grad():
-        for images, labels in val_loader:
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            val_loss += criterion(model(images), labels).item()
-
-    val_loss /= len(val_loader)
-
-    train_acc = calculate_accuracy(train_loader)
-    val_acc = calculate_accuracy(val_loader)
+    val_loss, val_acc = evaluate(val_loader)
 
     train_losses.append(train_loss)
     val_losses.append(val_loss)
@@ -178,7 +216,7 @@ for epoch in range(EPOCHS):
 # =========================
 # 11. TEST
 # =========================
-test_acc = calculate_accuracy(test_loader)
+test_loss, test_acc = evaluate(test_loader)
 print(f"\n✅ Test Accuracy: {test_acc:.4f}")
 
 # =========================
@@ -189,9 +227,11 @@ all_preds, all_labels = [], []
 model.eval()
 with torch.no_grad():
     for images, labels in val_loader:
-        images, labels = images.to(DEVICE), labels.to(DEVICE)
+        images = images.to(DEVICE, non_blocking=True)
+        labels = labels.to(DEVICE, non_blocking=True)
+
         outputs = model(images)
-        _, preds = torch.max(outputs, 1)
+        preds = outputs.argmax(dim=1)
 
         all_preds.extend(preds.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
@@ -205,3 +245,9 @@ plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.title("Confusion Matrix")
 plt.show()
+
+# =========================
+# 13. SAVE MODEL
+# =========================
+torch.save(model.state_dict(), "fruit_model3_fast.pth")
+print("✅ Model saved as fruit_model3_fast.pth")
