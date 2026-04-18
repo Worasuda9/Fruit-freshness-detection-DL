@@ -1,6 +1,3 @@
-# =========================
-# 0. IMPORTS
-# =========================
 import os
 import random
 import shutil
@@ -14,9 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-# =========================
-# 1. CONFIG
-# =========================
+# CONFIG
 SOURCE_DIR = "dataset"
 TARGET_DIR = "dataset_split"
 
@@ -34,28 +29,20 @@ IMG_SIZE = 224
 EPOCHS = 10
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# =========================
-# 2. REPRODUCIBILITY
-# =========================
+# REPRODUCIBILITY
 random.seed(42)
 torch.manual_seed(42)
 
-# =========================
-# 3. CLEAN OLD SPLIT (IMPORTANT)
-# =========================
+# CLEAN OLD SPLIT
 if os.path.exists(TARGET_DIR):
     shutil.rmtree(TARGET_DIR)
 
-# =========================
-# 4. CREATE FOLDERS
-# =========================
+# CREATE FOLDERS
 for split in SPLIT_RATIO:
     for cls in CLASSES:
         os.makedirs(os.path.join(TARGET_DIR, split, cls), exist_ok=True)
 
-# =========================
-# 5. SPLIT DATA (NO LEAKAGE)
-# =========================
+# SPLIT DATA (NO LEAKAGE)
 for fruit in FRUITS:
     for cls in CLASSES:
         folder = os.path.join(SOURCE_DIR, fruit, cls)
@@ -83,9 +70,7 @@ for fruit in FRUITS:
 
 print("Dataset split completed!")
 
-# =========================
-# 6. TRANSFORM (WITH AUGMENTATION)
-# =========================
+# TRANSFORM (WITH AUGMENTATION)
 # Train transform (full augmentation)
 train_transform = transforms_v2.Compose([
     transforms_v2.Resize((256, 256)),               # resize biggest first
@@ -113,9 +98,7 @@ val_transform = transforms_v2.Compose([
     transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
 ])
 
-# =========================
-# 7. LOAD DATA
-# =========================
+# LOAD DATA
 train_data = datasets.ImageFolder(
     f"{TARGET_DIR}/train", transform=train_transform)
 val_data = datasets.ImageFolder(f"{TARGET_DIR}/val",   transform=val_transform)
@@ -126,11 +109,7 @@ train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
-# =========================
-# 8. MODEL (BASELINE CNN)
-# =========================
-
-
+# 8. MODEL (CNN)
 class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
@@ -163,17 +142,11 @@ class SimpleCNN(nn.Module):
 
 model = SimpleCNN().to(DEVICE)
 
-# =========================
-# 9. LOSS & OPTIMIZER
-# =========================
+# LOSS & OPTIMIZER
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# =========================
-# 10. ACCURACY FUNCTION
-# =========================
-
-
+# ACCURACY FUNCTION
 def calculate_accuracy(loader):
     model.eval()
     correct, total = 0, 0
@@ -189,10 +162,7 @@ def calculate_accuracy(loader):
 
     return correct / total
 
-
-# =========================
-# 11. TRAINING LOOP
-# =========================
+# TRAINING LOOP
 train_losses, val_losses = [], []
 train_accs, val_accs = [], []
 
@@ -235,15 +205,11 @@ for epoch in range(EPOCHS):
     print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
     print(f"Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
-# =========================
-# 12. TEST ACCURACY
-# =========================
+# TEST ACCURACY
 test_acc = calculate_accuracy(test_loader)
 print(f"\nTest Accuracy: {test_acc:.4f}")
 
-# =========================
-# 13. CONFUSION MATRIX
-# =========================
+# CONFUSION MATRIX
 all_preds, all_labels = [], []
 
 model.eval()
@@ -266,9 +232,7 @@ plt.ylabel("Actual")
 plt.title("Confusion Matrix")
 plt.show()
 
-# =========================
-# 14. PLOTS
-# =========================
+# PLOTS
 plt.plot(train_losses, label="Train Loss")
 plt.plot(val_losses, label="Val Loss")
 plt.legend()
