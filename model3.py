@@ -96,7 +96,7 @@ test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
 # =========================
 # 7. LOAD PRETRAINED MODEL
 # =========================
-model = models.resnet18(pretrained=True)
+model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 
 # Freeze feature extractor
 for param in model.parameters():
@@ -116,6 +116,8 @@ optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 # =========================
 # 9. ACCURACY FUNCTION
 # =========================
+
+
 def calculate_accuracy(loader):
     model.eval()
     correct, total = 0, 0
@@ -130,6 +132,7 @@ def calculate_accuracy(loader):
             correct += (preds == labels).sum().item()
 
     return correct / total
+
 
 # =========================
 # 10. TRAIN LOOP
@@ -205,3 +208,30 @@ plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.title("Confusion Matrix")
 plt.show()
+
+# =========================
+# 13. PLOTS
+# =========================
+plt.figure()
+plt.plot(train_losses, label="Train Loss")
+plt.plot(val_losses, label="Val Loss")
+plt.legend()
+plt.title("Loss Curve - ResNet18")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.show()
+
+plt.figure()
+plt.plot(train_accs, label="Train Acc")
+plt.plot(val_accs, label="Val Acc")
+plt.legend()
+plt.title("Accuracy Curve - ResNet18")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.show()
+
+# =========================
+# 14. SAVE MODEL
+# =========================
+torch.save(model.state_dict(), "fruit_model3_fast.pth")
+print("✅ Model saved as fruit_model3_fast.pth")
