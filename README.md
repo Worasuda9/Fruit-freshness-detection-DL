@@ -1,19 +1,19 @@
-# 🍎 Fruit Freshness Classification
+# Fruit Freshness Classification
 
 A PyTorch-based project that compares 3 models for classifying fruits as **fresh** or **rotten** across 3 fruit types: apple, banana, and orange.
 
 ---
 
-## 📥 Dataset Download
+## Dataset Download
 
 | Data | Link |
 |------|------|
-| 🗂️ Full Dataset | [Download from Google Drive](https://drive.google.com/file/d/1SS-HpNd_HfUSEyjbPm77vwMb4BErP1z5/view?usp=drive_link) |
-| 🧪 Test Data | [Download from Google Drive](https://drive.google.com/drive/folders/1_ro7M60Mb1lRmGJEFkiZaQLWGbEVSlDr) |
+| Full Dataset | [Download from Google Drive](https://drive.google.com/file/d/1SS-HpNd_HfUSEyjbPm77vwMb4BErP1z5/view?usp=drive_link) |
+| Test Data | [Download from Google Drive](https://drive.google.com/drive/folders/1_ro7M60Mb1lRmGJEFkiZaQLWGbEVSlDr) |
 
 ---
 
-## 📁 Dataset Structure
+## Dataset Structure
 
 ```
 dataset/
@@ -39,7 +39,7 @@ dataset_split/
 
 ---
 
-## ⚙️ General Config (All Models)
+## General Config (All Models)
 
 | Parameter | Value |
 |-----------|-------|
@@ -53,7 +53,7 @@ dataset_split/
 
 ---
 
-## 🤖 Models
+## Models
 
 ---
 
@@ -190,7 +190,7 @@ optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 ---
 
-## 📊 Model Comparison
+## Model Comparison
 
 | | Model 1 | Model 2 | Model 3 |
 |---|---|---|---|
@@ -204,7 +204,7 @@ optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 **Install dependencies:**
 ```bash
@@ -220,7 +220,7 @@ python model3.py   # ResNet18 Transfer Learning
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 ```
 torch
@@ -232,7 +232,7 @@ seaborn
 
 ---
 
-## 📈 Output
+## Output
 
 All models produce the following outputs:
 - Per-epoch Train/Val Loss and Accuracy printed to console
