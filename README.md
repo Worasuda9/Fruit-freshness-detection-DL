@@ -204,33 +204,6 @@ optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 ---
 
-## Getting Started
-
-**Install dependencies:**
-```bash
-pip install torch torchvision scikit-learn matplotlib seaborn
-```
-
-**Run each model:**
-```bash
-python model1.py   # Baseline CNN
-python model2.py   # CNN + Augmentation
-python model3.py   # ResNet18 Transfer Learning
-```
-
----
-
-## Requirements
-
-```
-torch
-torchvision
-scikit-learn
-matplotlib
-seaborn
-```
-
----
 
 ## Output
 
@@ -240,3 +213,28 @@ All models produce the following outputs:
 - Confusion Matrix (evaluated on val set)
 - Loss Curve and Accuracy Curve plots
 - *(Model 3 only)* Saved model weights → `fruit_model3_fast.pth`
+
+---
+
+## Requirements
+
+### Python Dependencies
+
+Install required packages:
+```
+pip install -r requirements.txt
+```
+## Docker Setup
+
+### Build Docker Image
+```
+docker build -t fruit-app .
+```
+### Run the Application
+```
+docker run -p 8501:8501 fruit-app
+```
+Then open your browser:
+```
+http://localhost:8501
+```
