@@ -2,3 +2,7 @@ streamlit
 torch
 torchvision
 pillow
+pillow-heif
+matplotlib
+scikit-learn
+seaborn
