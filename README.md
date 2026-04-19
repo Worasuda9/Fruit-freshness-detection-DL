@@ -218,12 +218,17 @@ All models produce the following outputs:
 
 ## Requirements
 
+### Download the model:
+
+https://drive.google.com/file/d/1EreLrQ9fG_SMSqySl6E-DpBwZ_PoYuvf/view?usp=drivesdk
+
 ### Python Dependencies
 
 Install required packages:
 ```
 pip install -r requirements.txt
 ```
+
 ## Docker Setup
 
 ### Build Docker Image
