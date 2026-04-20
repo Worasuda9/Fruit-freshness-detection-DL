@@ -10,8 +10,8 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+from utils import split_dataset, calculate_accuracy
 
-# CONFIG
 SOURCE_DIR = "dataset"
 TARGET_DIR = "dataset_split"
 
@@ -29,45 +29,11 @@ IMG_SIZE = 224
 EPOCHS = 10
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# REPRODUCIBILITY
 random.seed(42)
 torch.manual_seed(42)
 
-# CLEAN OLD SPLIT
-if os.path.exists(TARGET_DIR):
-    shutil.rmtree(TARGET_DIR)
-
-# CREATE FOLDERS
-for split in SPLIT_RATIO:
-    for cls in CLASSES:
-        os.makedirs(os.path.join(TARGET_DIR, split, cls), exist_ok=True)
-
-# SPLIT DATA (NO LEAKAGE)
-for fruit in FRUITS:
-    for cls in CLASSES:
-        folder = os.path.join(SOURCE_DIR, fruit, cls)
-
-        # Remove hidden files like .DS_Store
-        images = [img for img in os.listdir(folder) if not img.startswith('.')]
-
-        random.shuffle(images)
-
-        total = len(images)
-        train_end = int(total * SPLIT_RATIO["train"])
-        val_end = train_end + int(total * SPLIT_RATIO["val"])
-
-        splits = {
-            "train": images[:train_end],
-            "val": images[train_end:val_end],
-            "test": images[val_end:]
-        }
-
-        for split in splits:
-            for img in splits[split]:
-                src = os.path.join(folder, img)
-                dst = os.path.join(TARGET_DIR, split, cls, f"{fruit}_{img}")
-                shutil.copy(src, dst)
-
+# SPLIT DATA
+split_dataset(SOURCE_DIR, TARGET_DIR, FRUITS, CLASSES, SPLIT_RATIO)
 print("Dataset split completed!")
 
 # TRANSFORM (WITH AUGMENTATION)
@@ -87,29 +53,26 @@ train_transform = transforms_v2.Compose([
     transforms_v2.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
     transforms_v2.ToImage(),
     transforms_v2.ToDtype(torch.float32, scale=True),
-    transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+    transforms_v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# Val/Test transform (No augmentation — Just resize + normalize)
+# Val/Test transform (No augmentation, Just resize + normalize)
 val_transform = transforms_v2.Compose([
     transforms_v2.Resize((IMG_SIZE, IMG_SIZE)),
     transforms_v2.ToImage(),
     transforms_v2.ToDtype(torch.float32, scale=True),
-    transforms_v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+    transforms_v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# LOAD DATA
-train_data = datasets.ImageFolder(
-    f"{TARGET_DIR}/train", transform=train_transform)
+train_data = datasets.ImageFolder(f"{TARGET_DIR}/train", transform=train_transform)
 val_data = datasets.ImageFolder(f"{TARGET_DIR}/val",   transform=val_transform)
-test_data = datasets.ImageFolder(
-    f"{TARGET_DIR}/test",  transform=val_transform)
+test_data = datasets.ImageFolder(f"{TARGET_DIR}/test",  transform=val_transform)
 
 train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE)
 test_loader = DataLoader(test_data, batch_size=BATCH_SIZE)
 
-# 8. MODEL (CNN)
+# MODEL (CNN)
 class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
@@ -139,28 +102,10 @@ class SimpleCNN(nn.Module):
         x = self.conv(x)
         return self.fc(x)
 
-
 model = SimpleCNN().to(DEVICE)
 
-# LOSS & OPTIMIZER
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-# ACCURACY FUNCTION
-def calculate_accuracy(loader):
-    model.eval()
-    correct, total = 0, 0
-
-    with torch.no_grad():
-        for images, labels in loader:
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            outputs = model(images)
-            _, preds = torch.max(outputs, 1)
-
-            total += labels.size(0)
-            correct += (preds == labels).sum().item()
-
-    return correct / total
 
 # TRAINING LOOP
 train_losses, val_losses = [], []
@@ -193,8 +138,8 @@ for epoch in range(EPOCHS):
 
     val_loss /= len(val_loader)
 
-    train_acc = calculate_accuracy(train_loader)
-    val_acc = calculate_accuracy(val_loader)
+    train_acc = calculate_accuracy(model, train_loader, DEVICE)
+    val_acc = calculate_accuracy(model, val_loader, DEVICE)
 
     train_losses.append(train_loss)
     val_losses.append(val_loss)
@@ -206,7 +151,7 @@ for epoch in range(EPOCHS):
     print(f"Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
 # TEST ACCURACY
-test_acc = calculate_accuracy(test_loader)
+test_acc = calculate_accuracy(model, test_loader, DEVICE)
 print(f"\nTest Accuracy: {test_acc:.4f}")
 
 # CONFUSION MATRIX
@@ -214,7 +159,7 @@ all_preds, all_labels = [], []
 
 model.eval()
 with torch.no_grad():
-    for images, labels in val_loader:
+    for images, labels in test_loader:
         images, labels = images.to(DEVICE), labels.to(DEVICE)
         outputs = model(images)
         _, preds = torch.max(outputs, 1)
@@ -229,18 +174,20 @@ sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
             yticklabels=["Fresh", "Rotten"])
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
-plt.title("Confusion Matrix")
+plt.title("Model 2(CNN+Data Aug): Confusion Matrix")
 plt.show()
 
-# PLOTS
 plt.plot(train_losses, label="Train Loss")
 plt.plot(val_losses, label="Val Loss")
 plt.legend()
-plt.title("Loss Curve")
+plt.title("Model 2(CNN+Data Aug): Loss Curve")
 plt.show()
 
 plt.plot(train_accs, label="Train Acc")
 plt.plot(val_accs, label="Val Acc")
 plt.legend()
-plt.title("Accuracy Curve")
+plt.title("Model 2(CNN+Data Aug): Accuracy Curve")
 plt.show()
+
+from sklearn.metrics import classification_report
+print(classification_report(all_labels, all_preds, target_names=["Fresh", "Rotten"]))
