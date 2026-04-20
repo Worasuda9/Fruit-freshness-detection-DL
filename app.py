@@ -13,7 +13,7 @@ CLASS_NAMES = ["Fresh", "Rotten"]
 def load_model():
     model = models.resnet18(pretrained=False)
     model.fc = nn.Linear(model.fc.in_features, 2)
-    model.load_state_dict(torch.load("fruit_model3_finetuned.pth", map_location=DEVICE))
+    model.load_state_dict(torch.load("fruit_model3_2_fast.pth", map_location=DEVICE))
     model.to(DEVICE)
     model.eval()
     return model
