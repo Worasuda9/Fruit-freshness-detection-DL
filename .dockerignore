@@ -6,3 +6,7 @@ dataset_split/
 __pycache__/
 *.pyc
 *.pkl
+
+.git/
+.venv/
+venv/

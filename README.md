@@ -190,6 +190,63 @@ optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 ---
 
+### Model 3-1 — ResNet18 (Optimized Variant)
+
+**File:** `model3-1.py`
+
+**Concept:** An optimized variant of Model 3 using ResNet18 with mixed precision training, larger batch size, and different image size for improved performance.
+
+**Architecture:** Same as Model 3 (ResNet18 with frozen backbone, trainable fc layer)
+
+**Key Differences from Model 3:**
+
+- Image Size: 160 × 160 (vs 224 × 224)
+- Batch Size: 64 (vs 32)
+- Mixed Precision Training: Enabled for faster training on CUDA
+- Weight Decay: 1e-4 added to optimizer
+- Saves model as `fruit_model3_2_fast.pth`
+
+**Transform:** Same as Model 3
+
+**Key Code:**
+```python
+model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+
+# Freeze feature extractor
+for param in model.parameters():
+    param.requires_grad = False
+
+# Replace final layer
+model.fc = nn.Linear(model.fc.in_features, 2)
+
+optimizer = optim.Adam(model.fc.parameters(), lr=0.001, weight_decay=1e-4)
+
+# Mixed precision
+scaler = torch.amp.GradScaler(enabled=(DEVICE.type == "cuda"))
+
+# In training loop:
+with torch.amp.autocast(enabled=(DEVICE.type == "cuda")):
+    outputs = model(images)
+    loss = criterion(outputs, labels)
+
+scaler.scale(loss).backward()
+scaler.step(optimizer)
+scaler.update()
+```
+
+**Output:** Model weights saved as `fruit_model3_2_fast.pth`
+
+**Pros:**
+- Mixed precision speeds up training
+- Larger batch size for better gradient estimation
+- Weight decay helps prevent overfitting
+
+**Cons:**
+- Smaller image size may lose some details
+- More complex training loop
+
+---
+
 ## Model Comparison
 
 | | Model 1 | Model 2 | Model 3 |
@@ -212,15 +269,11 @@ All models produce the following outputs:
 - Final Test Accuracy
 - Confusion Matrix (evaluated on val set)
 - Loss Curve and Accuracy Curve plots
-- *(Model 3 only)* Saved model weights → `fruit_model3_fast.pth`
+- *(Model 3 and Model 3-1)* Saved model weights → `fruit_model3_fast.pth` and `fruit_model3_2_fast.pth` respectively
 
 ---
 
 ## Requirements
-
-### Download the model:
-
-https://drive.google.com/file/d/1EreLrQ9fG_SMSqySl6E-DpBwZ_PoYuvf/view?usp=drivesdk
 
 ### Python Dependencies
 

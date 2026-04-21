@@ -5,7 +5,9 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy files
-COPY . /app
+COPY app.py /app/
+COPY fruit_model3_2_fast.pth /app/
+COPY requirements.txt /app/
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
