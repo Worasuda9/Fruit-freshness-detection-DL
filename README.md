@@ -36,6 +36,34 @@ dataset_split/
 ├── val/     (15%)
 └── test/    (15%)
 ```
+---
+
+## Requirements Setup
+
+### Python Dependencies
+
+Install required packages:
+```
+pip install -r requirements.txt
+```
+
+## Docker Setup
+
+### Build Docker Image
+```
+docker build -t fruit-app .
+```
+### Run the Application
+```
+docker run -p 8501:8501 fruit-app
+```
+Then open your browser:
+```
+http://localhost:8501
+```
+
+## Live Demo
+https://drive.google.com/file/d/1lunseLyLg9VDKecUlPLy4K4fg7kxmQNR/view?usp=sharing
 
 ---
 
@@ -273,30 +301,5 @@ All models produce the following outputs:
 
 ---
 
-## Requirements
 
-### Python Dependencies
-
-Install required packages:
-```
-pip install -r requirements.txt
-```
-
-## Docker Setup
-
-### Build Docker Image
-```
-docker build -t fruit-app .
-```
-### Run the Application
-```
-docker run -p 8501:8501 fruit-app
-```
-Then open your browser:
-```
-http://localhost:8501
-```
-
-## Live Demo
-https://drive.google.com/file/d/1lunseLyLg9VDKecUlPLy4K4fg7kxmQNR/view?usp=sharing
 
